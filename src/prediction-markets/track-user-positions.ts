@@ -10,10 +10,11 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 
 const USER_WALLET_ADDRESS = process.env.USER_WALLET_ADDRESS;
 const METADATA_API_BASE_URL = "https://dev-prediction-markets-api.dflow.net";
+const MAX_MINTS = 500;
 
-async function getTokenAccounts() {
+async function getTokenAccounts(walletAddress: string) {
     const connection = new Connection("https://api.mainnet-beta.solana.com");
-    const userWallet = new PublicKey(USER_WALLET_ADDRESS!);
+    const userWallet = new PublicKey(walletAddress);
 
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
         userWallet,
@@ -42,7 +43,10 @@ async function getTokenAccounts() {
 }
 
 async function filterOutcomeMints(nonZeroBalances: any[]) {
-    const allMintAddresses = nonZeroBalances.map((token) => token.mint);
+    const allMintAddresses = nonZeroBalances
+        .map((token) => token.mint)
+        .filter((mint) => typeof mint === "string" && mint.length > 0)
+        .slice(0, MAX_MINTS);
 
     const response = await fetch(
         `${METADATA_API_BASE_URL}/api/v1/filter_outcome_mints`,
@@ -72,12 +76,15 @@ async function filterOutcomeMints(nonZeroBalances: any[]) {
 }
 
 async function fetchMarketBatch(outcomeMints: string[]) {
+    const safeOutcomeMints = outcomeMints
+        .filter((mint) => typeof mint === "string" && mint.length > 0)
+        .slice(0, MAX_MINTS);
     const marketsResponse = await fetch(
         `${METADATA_API_BASE_URL}/api/v1/markets/batch`,
         {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mints: outcomeMints }),
+            body: JSON.stringify({ mints: safeOutcomeMints }),
         }
     );
 
@@ -151,7 +158,7 @@ async function main() {
         throw new Error('USER_WALLET_ADDRESS must be set in .env file');
     }
 
-    const nonZeroBalances = await getTokenAccounts();
+    const nonZeroBalances = await getTokenAccounts(USER_WALLET_ADDRESS);
     const { outcomeMints, outcomeTokens } = await filterOutcomeMints(nonZeroBalances);
     const marketsByMint = await fetchMarketBatch(outcomeMints);
     buildPositionRows(outcomeTokens, marketsByMint);

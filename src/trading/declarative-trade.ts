@@ -10,12 +10,14 @@ import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import { monitorOrder } from "@dflow-protocol/swap-api-utils";
 import bs58 from "bs58";
 
-const SOL = "So11111111111111111111111111111111111111112";
-const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const SOL = process.env.DFLOW_INPUT_MINT || "So11111111111111111111111111111111111111112";
+const USDC =
+  process.env.DFLOW_OUTPUT_MINT || "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
+// Demo values: make these configurable and validate in production.
 // Match the imperative example: 0.0001 SOL, 0.5% slippage
-const amount = 100_000; // lamports
-const slippageBps = 50;
+const amount = Number(process.env.DFLOW_INPUT_AMOUNT ?? "100000"); // lamports
+const slippageBps = Number(process.env.DFLOW_SLIPPAGE_BPS ?? "50");
 
 // Base URL for the DFlow Trading API (dev)
 const TRADE_API_BASE_URL = process.env.DFLOW_TRADE_API_URL || "https://dev-quote-api.dflow.net";
@@ -74,6 +76,7 @@ async function parseJsonOrThrow(response: Response, label: string) {
 // Format: Base58 string (e.g., 'YourBase58PrivateKeyHere') or JSON array (e.g., [1,2,3,...])
 function getKeypair(): Keypair {
   const privateKeyStr = process.env.SOLANA_PRIVATE_KEY;
+  // Demo only: never log keys; use secure key management in production.
 
   if (!privateKeyStr) {
     throw new Error(
@@ -132,6 +135,7 @@ async function main() {
   const transaction = intentData.openTransaction;
   const transactionBytes = Buffer.from(transaction, "base64");
   const openTransaction = Transaction.from(transactionBytes);
+  // Demo only: validate transaction contents before signing in production.
   openTransaction.sign(keypair);
   // SUBMIT INTENT
   const submitHeaders: HeadersInit = {

@@ -32,6 +32,7 @@ type Event = {
     markets?: Market[];
 };
 
+// Demo-style parsing: production code should validate response schemas.
 async function getEventsWithNestedMarkets() {
     const response = await fetch(
         `${METADATA_API_BASE_URL}/api/v1/events?withNestedMarkets=true&limit=200`,
